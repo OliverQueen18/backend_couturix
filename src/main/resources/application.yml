@@ -1,0 +1,142 @@
+spring:
+  application:
+    name: CouturiX
+  profiles:
+    default: dev
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: true
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+couturix:
+  jwt:
+    secret: ${JWT_SECRET:CHANGE_ME_IN_PRODUCTION_use_at_least_64_characters_secret_key_please}
+    access-token-minutes: ${JWT_ACCESS_MINUTES:15}
+    refresh-token-days: ${JWT_REFRESH_DAYS:7}
+  storage:
+    directory: ${STORAGE_DIR:./uploads}
+    public-url-prefix: /api/v1/files
+  stock:
+    allow-negative: ${STOCK_ALLOW_NEGATIVE:false}
+  notifications:
+    from-email: ${MAIL_FROM:noreply@couturix.local}
+    whatsapp:
+      enabled: ${WHATSAPP_ENABLED:false}
+      api-url: ${WHATSAPP_API_URL:https://graph.facebook.com/v20.0}
+      phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+      access-token: ${WHATSAPP_ACCESS_TOKEN:}
+  bootstrap:
+    admin-email: ${ADMIN_EMAIL:admin@couturix.local}
+    admin-password: ${ADMIN_PASSWORD:Admin123!}
+    admin-nom: Administrateur
+    admin-prenom: CouturiX
+
+logging:
+  level:
+    root: INFO
+    com.couturix: INFO
+    org.springframework.security: WARN
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/couturix}
+    username: ${DATABASE_USERNAME:couturix}
+    password: ${DATABASE_PASSWORD:couturix}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.couturix: DEBUG
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    show-sql: false
+server:
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    com.couturix: INFO
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:couturix;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  mail:
+    host: localhost
+    port: 3025

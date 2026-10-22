@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+target
+uploads
+backup
+logs
+.env
+*.iml
+README.md
+Jenkinsfile

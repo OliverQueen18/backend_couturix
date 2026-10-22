@@ -1,0 +1,19 @@
+ALTER TABLE ateliers
+    ADD COLUMN IF NOT EXISTS sigle VARCHAR(40),
+    ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE TABLE IF NOT EXISTS otp_codes (
+    id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(180) NOT NULL,
+    code_hash VARCHAR(64) NOT NULL,
+    purpose VARCHAR(40) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    consumed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_codes (email, purpose);

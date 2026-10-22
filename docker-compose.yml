@@ -1,0 +1,93 @@
+# Développement local. PostgreSQL n'écoute que sur localhost.
+# Usage : copier .env.example vers .env puis `docker compose up --build`
+# Production VPS (nginx-proxy) : overlay docs/docker-compose.couturix.yml
+name: couturix
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: couturix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-couturix}
+      POSTGRES_USER: ${POSTGRES_USER:-couturix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backup:/backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-couturix} -d ${POSTGRES_DB:-couturix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  backend:
+    image: ${BACKEND_IMAGE:-couturix-backend:local}
+    build: .
+    container_name: couturix-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-couturix}
+      DATABASE_USERNAME: ${POSTGRES_USER:-couturix}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@couturix.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-noreply@couturix.local}
+      WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      STOCK_ALLOW_NEGATIVE: ${STOCK_ALLOW_NEGATIVE:-false}
+      STORAGE_DIR: /data/uploads
+    volumes:
+      - uploads_data:/data/uploads
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-couturix-frontend:local}
+    build:
+      context: ../frontend_couturix
+    container_name: couturix-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: couturix-mailhog
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -1,0 +1,38 @@
+# Production locale / VPS autonome : PostgreSQL et l’API restent internes.
+# Usage : docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Sur OliveApps (nginx-proxy), utiliser docs/docker-compose.couturix.yml.
+name: couturix
+
+services:
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  backend:
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  mailhog:
+    profiles: ["mail"]
