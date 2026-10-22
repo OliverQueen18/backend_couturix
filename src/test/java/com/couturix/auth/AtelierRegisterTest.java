@@ -35,7 +35,8 @@ class AtelierRegisterTest {
                                   "email": "gerant-maison@couturix.test",
                                   "password": "Atelier123!",
                                   "nom": "Kaya",
-                                  "prenom": "Amina"
+                                  "prenom": "Amina",
+                                  "plan": "GRATUIT"
                                 }
                                 """))
                 .andExpect(status().isOk())
