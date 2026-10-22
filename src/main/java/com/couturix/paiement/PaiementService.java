@@ -2,9 +2,10 @@ package com.couturix.paiement;
 import com.couturix.caisse.CaisseService;
 import com.couturix.client.Client; import com.couturix.client.ClientService;
 import com.couturix.commande.CommandeService;
+import com.couturix.common.exception.ApiException;
 import com.couturix.domain.enums.*;
 import com.couturix.notification.NotificationService;
-import java.math.BigDecimal; import java.util.List;
+import java.math.BigDecimal; import java.time.LocalDate; import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +20,13 @@ public class PaiementService {
   public List<Paiement> list() { return repo.findAll(); }
 
   @Transactional @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','CAISSIER')")
-  public Paiement enregistrer(Long clientId, Long commandeId, BigDecimal montant, MoyenPaiement moyen, String reference) {
+  public Paiement enregistrer(Long clientId, Long commandeId, BigDecimal montant, MoyenPaiement moyen, String reference, LocalDate datePaiement, String notes) {
+    if (clientId == null) throw ApiException.badRequest("Client obligatoire");
+    if (montant == null) throw ApiException.badRequest("Montant obligatoire");
     Client client = clientService.require(clientId);
     Paiement p = new Paiement(); p.setClient(client); p.setMontant(montant); p.setMoyen(moyen==null?MoyenPaiement.ESPECES:moyen); p.setReference(reference);
+    p.setDatePaiement(datePaiement == null ? LocalDate.now() : datePaiement);
+    p.setNotes(notes);
     if (commandeId!=null) p.setCommande(commandeService.find(commandeId));
     client.setSolde(client.getSolde().subtract(montant));
     Paiement saved = repo.save(p);

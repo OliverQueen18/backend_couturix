@@ -3,6 +3,7 @@ package com.couturix.common.domain;
 import com.couturix.atelier.Atelier;
 import com.couturix.common.tenant.TenantAssigner;
 import com.couturix.common.tenant.TenantOwned;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -19,6 +20,7 @@ import org.hibernate.annotations.Filter;
 @EntityListeners(TenantAssigner.class)
 public abstract class TenantEntity extends AuditableEntity implements TenantOwned {
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atelier_id")
     private Atelier atelier;

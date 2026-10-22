@@ -4,6 +4,7 @@ import com.couturix.common.tenant.TenantAssigner;
 import com.couturix.common.tenant.TenantOwned;
 import com.couturix.domain.enums.ModeRemuneration;
 import com.couturix.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal; import java.time.Instant; import java.util.*;
 import lombok.Getter; import lombok.Setter;
@@ -13,6 +14,7 @@ import org.hibernate.annotations.Filter;
 @EntityListeners(TenantAssigner.class)
 public class Tailleur implements TenantOwned {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
+  @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "atelier_id") private Atelier atelier;
   @ManyToOne @JoinColumn(name="user_id") private User user;
   @Column(nullable=false, length=100) private String nom;

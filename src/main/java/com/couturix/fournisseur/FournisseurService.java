@@ -1,15 +1,11 @@
 package com.couturix.fournisseur;
 
-import com.couturix.common.audit.AuditService;
 import com.couturix.common.exception.ApiException;
-import com.couturix.fournisseur.dto.FournisseurDto;
 import com.couturix.fournisseur.dto.FournisseurRequest;
-import com.couturix.security.SecurityUtils;
-import java.util.Locale;
+import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,72 +13,48 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class FournisseurService {
 
-    private final FournisseurRepository repository;
-    private final AuditService auditService;
+    private final FournisseurRepository repo;
 
     @Transactional(readOnly = true)
-    public Page<FournisseurDto> search(String q, Pageable pageable) {
-        Specification<Fournisseur> spec = (root, query, cb) -> {
-            if (q == null || q.isBlank()) {
-                return cb.conjunction();
-            }
-            String like = "%" + q.toLowerCase(Locale.ROOT) + "%";
-            return cb.or(
-                    cb.like(cb.lower(root.get("nom")), like),
-                    cb.like(cb.lower(root.get("telephone")), like),
-                    cb.like(cb.lower(root.get("email")), like)
-            );
-        };
-        return repository.findAll(spec, pageable).map(this::toDto);
-    }
-
-    @Transactional(readOnly = true)
-    public FournisseurDto get(Long id) {
-        return toDto(find(id));
+    public List<Fournisseur> list() {
+        return repo.findAll();
     }
 
     @Transactional
-    public FournisseurDto create(FournisseurRequest request) {
-        Fournisseur f = new Fournisseur();
-        apply(f, request);
-        repository.save(f);
-        auditService.log(SecurityUtils.currentUserId(), "CREATE", "FOURNISSEUR", f.getId(), f.getNom());
-        return toDto(f);
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','MAGASINIER')")
+    public Fournisseur create(FournisseurRequest request) {
+        Fournisseur fournisseur = new Fournisseur();
+        apply(fournisseur, request);
+        return repo.save(fournisseur);
     }
 
     @Transactional
-    public FournisseurDto update(Long id, FournisseurRequest request) {
-        Fournisseur f = find(id);
-        apply(f, request);
-        repository.save(f);
-        auditService.log(SecurityUtils.currentUserId(), "UPDATE", "FOURNISSEUR", id, f.getNom());
-        return toDto(f);
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','MAGASINIER')")
+    public Fournisseur update(Long id, FournisseurRequest request) {
+        Fournisseur fournisseur = repo.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Fournisseur introuvable"));
+        apply(fournisseur, request);
+        fournisseur.setUpdatedAt(Instant.now());
+        return repo.save(fournisseur);
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
     public void delete(Long id) {
-        Fournisseur f = find(id);
-        f.setActif(false);
-        repository.save(f);
-        auditService.log(SecurityUtils.currentUserId(), "DELETE", "FOURNISSEUR", id, null);
+        if (!repo.existsById(id)) {
+            throw ApiException.notFound("Fournisseur introuvable");
+        }
+        repo.deleteById(id);
     }
 
-    public Fournisseur find(Long id) {
-        return repository.findById(id).orElseThrow(() -> ApiException.notFound("Fournisseur introuvable"));
-    }
-
-    public FournisseurDto toDto(Fournisseur f) {
-        return new FournisseurDto(f.getId(), f.getNom(), f.getTelephone(), f.getEmail(), f.getAdresse(), f.getNotes(), f.isActif());
-    }
-
-    private void apply(Fournisseur f, FournisseurRequest request) {
-        f.setNom(request.nom());
-        f.setTelephone(request.telephone());
-        f.setEmail(request.email());
-        f.setAdresse(request.adresse());
-        f.setNotes(request.notes());
+    private void apply(Fournisseur fournisseur, FournisseurRequest request) {
+        fournisseur.setNom(request.nom());
+        fournisseur.setTelephone(request.telephone());
+        fournisseur.setEmail(request.email());
+        fournisseur.setAdresse(request.adresse());
+        fournisseur.setNotes(request.notes());
         if (request.actif() != null) {
-            f.setActif(request.actif());
+            fournisseur.setActif(request.actif());
         }
     }
 }

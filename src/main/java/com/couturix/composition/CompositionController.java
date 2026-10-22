@@ -12,5 +12,6 @@ public class CompositionController {
   @GetMapping("/modele/{modeleId}") public List<CompositionDto> byModele(@PathVariable Long modeleId) { return service.byModele(modeleId); }
   @GetMapping("/{id}") public CompositionDto get(@PathVariable Long id) { return service.get(id); }
   @PostMapping public CompositionDto create(@RequestBody CompositionDto dto) { return service.create(dto); }
+  @PutMapping("/{id}") public CompositionDto update(@PathVariable Long id, @RequestBody CompositionDto dto) { return service.update(id, dto); }
   @GetMapping("/{id}/cout") public CostCalculationEngine.CostBreakdown cout(@PathVariable Long id) { return service.cout(id); }
 }

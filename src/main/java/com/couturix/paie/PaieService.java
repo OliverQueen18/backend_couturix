@@ -31,6 +31,9 @@ public class PaieService {
 
   @Transactional @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','COMPTABLE')")
   public Paie calculer(Long tailleurId, LocalDate debut, LocalDate fin, BigDecimal primes, BigDecimal retenues) {
+    if (tailleurId == null || debut == null || fin == null) {
+      throw ApiException.badRequest("Tailleur et période sont obligatoires");
+    }
     Tailleur t = tailleurService.require(tailleurId);
     BigDecimal brut = BigDecimal.ZERO;
     long pieces = productionRepository.findValidatedInPeriod(t.getId(),

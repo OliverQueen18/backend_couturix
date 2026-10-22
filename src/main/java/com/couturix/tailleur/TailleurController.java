@@ -11,6 +11,6 @@ public class TailleurController {
   @GetMapping("/tailleurs") public List<TailleurDto> list() { return service.list(); }
   @GetMapping("/tailleurs/{id}") public TailleurDto get(@PathVariable Long id) { return service.get(id); }
   @PostMapping("/tailleurs") public TailleurDto create(@RequestBody TailleurDto dto) { return service.save(dto); }
-  @PutMapping("/tailleurs/{id}") public TailleurDto update(@PathVariable Long id, @RequestBody TailleurDto dto) { return service.save(new TailleurDto(id, dto.nom(), dto.prenom(), dto.telephone(), dto.email(), dto.modeRemuneration(), dto.salaireFixe(), dto.tauxPiece(), dto.pourcentage(), dto.actif(), dto.specialites())); }
+  @PutMapping("/tailleurs/{id}") public TailleurDto update(@PathVariable Long id, @RequestBody TailleurDto dto) { return service.save(id, dto); }
   @GetMapping("/specialites") public List<Specialite> specialites() { return service.specialites(); }
 }

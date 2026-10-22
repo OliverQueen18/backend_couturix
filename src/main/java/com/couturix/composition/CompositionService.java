@@ -31,6 +31,15 @@ public class CompositionService {
     return toDto(repo.save(c));
   }
 
+  @Transactional @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
+  public CompositionDto update(Long id, CompositionDto dto) {
+    Composition c = require(id);
+    c.setLibelle(dto.libelle());
+    c.getLignes().clear();
+    if (dto.lignes()!=null) dto.lignes().forEach(l -> c.getLignes().add(toEntity(l, c)));
+    return toDto(repo.save(c));
+  }
+
   public CostCalculationEngine.CostBreakdown cout(Long id) {
     Composition c = require(id);
     var lines = c.getLignes().stream().map(l -> new CostCalculationEngine.LineInput(l.getTypeLigne(), l.getQuantite(), l.getCoutUnitaire())).toList();
