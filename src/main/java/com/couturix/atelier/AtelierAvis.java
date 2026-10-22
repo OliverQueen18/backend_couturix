@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -33,6 +35,7 @@ public class AtelierAvis {
     private Client client;
 
     @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.SMALLINT)
     private int note;
 
     @Column(columnDefinition = "TEXT")
