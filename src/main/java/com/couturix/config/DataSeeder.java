@@ -8,10 +8,15 @@ import com.couturix.domain.enums.PlanCode;
 import com.couturix.domain.enums.RoleCode;
 import com.couturix.user.Role;
 import com.couturix.user.RoleRepository;
+import com.couturix.tailleur.Specialite;
+import com.couturix.tailleur.SpecialiteCatalog;
+import com.couturix.tailleur.SpecialiteRepository;
 import com.couturix.user.User;
 import com.couturix.user.UserRepository;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -42,6 +47,7 @@ public class DataSeeder implements CommandLineRunner {
     private final AtelierRepository atelierRepository;
     private final PasswordEncoder passwordEncoder;
     private final CouturixProperties properties;
+    private final SpecialiteRepository specialiteRepository;
 
     @Override
     @Transactional
@@ -61,6 +67,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setDescription("Autoriser les sorties de stock négatives");
             return parametreRepository.save(p);
         });
+        ensureSpecialites();
         if (userRepository.count() > 0) {
             return;
         }
@@ -87,5 +94,19 @@ public class DataSeeder implements CommandLineRunner {
         roleRepository.findByCode(RoleCode.SUPER_ADMIN).ifPresent(role -> admin.setRoles(Set.of(role)));
         userRepository.save(admin);
         log.info("Compte SUPER_ADMIN initial créé : {}", admin.getEmail());
+    }
+
+    private void ensureSpecialites() {
+        Set<String> existing = specialiteRepository.findAll().stream()
+                .map(Specialite::getLibelle)
+                .map(libelle -> libelle.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        for (String libelle : SpecialiteCatalog.LIBELLES) {
+            if (existing.add(libelle.toLowerCase(Locale.ROOT))) {
+                Specialite specialite = new Specialite();
+                specialite.setLibelle(libelle);
+                specialiteRepository.save(specialite);
+            }
+        }
     }
 }

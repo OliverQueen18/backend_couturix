@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +18,12 @@ public class TailleurService {
     private final TailleurRepository repo;
     private final SpecialiteRepository specialiteRepository;
 
+    @Transactional(readOnly = true)
     public List<TailleurDto> list() {
         return repo.findAll().stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
     public TailleurDto get(Long id) {
         return toDto(require(id));
     }
@@ -57,30 +60,47 @@ public class TailleurService {
         t.setTauxPiece(dto.tauxPiece());
         t.setPourcentage(dto.pourcentage());
         t.setActif(dto.actif());
-        if (dto.specialiteIds() != null && !dto.specialiteIds().isEmpty()) {
+        if (dto.specialiteIds() != null) {
             Set<Specialite> selected = new HashSet<>();
             specialiteRepository.findAllById(dto.specialiteIds()).forEach(selected::add);
             t.setSpecialites(selected);
         } else if (dto.specialites() != null) {
             t.setSpecialites(dto.specialites().stream()
-                    .map(n -> specialiteRepository.findAll().stream()
-                            .filter(s -> s.getLibelle().equals(n))
-                            .findFirst()
-                            .orElseGet(() -> {
-                                Specialite s = new Specialite();
-                                s.setLibelle(n);
-                                return specialiteRepository.save(s);
-                            }))
+                    .map(this::requireSpecialite)
                     .collect(Collectors.toSet()));
         }
         return toDto(repo.save(t));
     }
 
+    @Transactional(readOnly = true)
     public List<Specialite> specialites() {
-        return specialiteRepository.findAll();
+        return specialiteRepository.findAll(Sort.by(Sort.Direction.ASC, "libelle"));
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
+    public Specialite createSpecialite(String libelle) {
+        String normalized = normalizeLibelle(libelle);
+        if (normalized.isBlank()) {
+            throw ApiException.badRequest("Indiquez le nom de la spécialité");
+        }
+        return specialiteRepository.findByLibelleIgnoreCase(normalized).orElseGet(() -> {
+            Specialite created = new Specialite();
+            created.setLibelle(normalized);
+            return specialiteRepository.save(created);
+        });
+    }
+
+    private Specialite requireSpecialite(String libelle) {
+        return createSpecialite(libelle);
+    }
+
+    private static String normalizeLibelle(String libelle) {
+        return libelle == null ? "" : libelle.trim().replaceAll("\\s+", " ");
     }
 
     public TailleurDto toDto(Tailleur t) {
+        Set<Specialite> specs = t.getSpecialites() == null ? Set.of() : t.getSpecialites();
         return new TailleurDto(
                 t.getId(),
                 t.getNom(),
@@ -92,7 +112,7 @@ public class TailleurService {
                 t.getTauxPiece(),
                 t.getPourcentage(),
                 t.isActif(),
-                t.getSpecialites().stream().map(Specialite::getLibelle).collect(Collectors.toSet()),
-                t.getSpecialites().stream().map(Specialite::getId).collect(Collectors.toSet()));
+                specs.stream().map(Specialite::getLibelle).collect(Collectors.toSet()),
+                specs.stream().map(Specialite::getId).collect(Collectors.toSet()));
     }
 }

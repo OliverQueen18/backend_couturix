@@ -16,7 +16,8 @@ public class Tailleur implements TenantOwned {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "atelier_id") private Atelier atelier;
-  @ManyToOne @JoinColumn(name="user_id") private User user;
+  @JsonIgnore
+  @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name="user_id") private User user;
   @Column(nullable=false, length=100) private String nom;
   @Column(nullable=false, length=100) private String prenom;
   private String telephone; private String email;
@@ -27,7 +28,8 @@ public class Tailleur implements TenantOwned {
   @Column(nullable=false) private boolean actif = true;
   @Column(name="created_at", nullable=false) private Instant createdAt = Instant.now();
   @Column(name="updated_at", nullable=false) private Instant updatedAt = Instant.now();
-  @ManyToMany @JoinTable(name="tailleur_specialites", joinColumns=@JoinColumn(name="tailleur_id"), inverseJoinColumns=@JoinColumn(name="specialite_id"))
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(name="tailleur_specialites", joinColumns=@JoinColumn(name="tailleur_id"), inverseJoinColumns=@JoinColumn(name="specialite_id"))
   private Set<Specialite> specialites = new HashSet<>();
   public String nomComplet() { return prenom + " " + nom; }
 }
