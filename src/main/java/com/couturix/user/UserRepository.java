@@ -12,15 +12,13 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByEmailIgnoreCase(String email);
     boolean existsByEmailIgnoreCase(String email);
 
-    @Query(value = """
-            SELECT u.plan_code
-            FROM users u
-            JOIN user_roles ur ON ur.user_id = u.id
-            JOIN roles r ON r.id = ur.role_id
-            WHERE u.atelier_id = :atelierId
-              AND r.code = 'ADMIN'
-            """, nativeQuery = true)
-    List<String> findAdminPlanCodes(@Param("atelierId") Long atelierId);
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN u.roles r
+            WHERE u.atelier.id = :atelierId
+              AND r.code = :role
+            """)
+    List<User> findAdminsByAtelierId(@Param("atelierId") Long atelierId, @Param("role") RoleCode role);
 
     long countDistinctByRoles_Code(RoleCode code);
 }

@@ -22,6 +22,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Filter;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -70,6 +71,9 @@ public class User extends AuditableEntity implements TenantOwned {
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_code", nullable = false, length = 20)
     private PlanCode planCode = PlanCode.GRATUIT;
+
+    @Column(name = "plan_started_at", nullable = false)
+    private Instant planStartedAt = Instant.now();
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "atelier_id")

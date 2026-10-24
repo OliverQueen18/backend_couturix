@@ -1,5 +1,6 @@
 package com.couturix.config;
 
+import com.couturix.abonnement.PlanOffreService;
 import com.couturix.admin.Parametre;
 import com.couturix.admin.ParametreRepository;
 import com.couturix.atelier.Atelier;
@@ -48,6 +49,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final CouturixProperties properties;
     private final SpecialiteRepository specialiteRepository;
+    private final PlanOffreService planOffreService;
 
     @Override
     @Transactional
@@ -68,6 +70,7 @@ public class DataSeeder implements CommandLineRunner {
             return parametreRepository.save(p);
         });
         ensureSpecialites();
+        planOffreService.ensureDefaults();
         if (userRepository.count() > 0) {
             return;
         }

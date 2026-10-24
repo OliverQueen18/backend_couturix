@@ -114,6 +114,7 @@ public class AuthService {
             throw ApiException.badRequest("Choisissez un plan");
         }
         user.setPlanCode(abonnementService.parse(request.plan()));
+        user.setPlanStartedAt(Instant.now());
         user.setAtelier(atelier);
         user.setRoles(Set.of(roleRepository.findByCode(RoleCode.ADMIN)
                 .orElseThrow(() -> ApiException.badRequest("Rôle ADMIN introuvable"))));

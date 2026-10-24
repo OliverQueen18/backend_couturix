@@ -6,10 +6,12 @@ import com.couturix.atelier.TenantService;
 import com.couturix.common.exception.ApiException;
 import com.couturix.common.tenant.TenantContext;
 import com.couturix.domain.enums.PlanCode;
+import com.couturix.domain.enums.RoleCode;
 import com.couturix.notification.SmsGatewayService;
 import com.couturix.security.SecurityUtils;
 import com.couturix.user.User;
 import com.couturix.user.UserRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,19 +24,20 @@ public class AbonnementService {
     private final AtelierRepository atelierRepository;
     private final TenantService tenantService;
     private final SmsGatewayService smsGatewayService;
+    private final PlanOffreService planOffreService;
 
     @Transactional(readOnly = true)
     public AbonnementDto courant() {
         boolean bypass = TenantContext.current().map(TenantContext.Snapshot::bypass).orElse(false);
         if (bypass || SecurityUtils.hasRole("SUPER_ADMIN")) {
             int used = TenantContext.current().map(snapshot -> snapshot.scopeIds().size()).orElse(0);
-            return toDto(PlanCode.PLATEFORME, used);
+            return toDto(planOffreService.resolve(PlanCode.PLATEFORME, Instant.now()), used);
         }
         User user = userRepository.findById(SecurityUtils.currentUserId())
                 .orElseThrow(() -> ApiException.unauthorized("Non authentifié"));
         Atelier racine = racine();
         int used = racine == null ? 0 : tenantService.collectScope(racine.getId()).size();
-        return toDto(planDeLaMaison(user, racine), used);
+        return toDto(maison(user, racine), used);
     }
 
     @Transactional
@@ -43,15 +46,16 @@ public class AbonnementService {
                 .orElseThrow(() -> ApiException.notFound("Utilisateur introuvable"));
         PlanCode plan = parse(planCode);
         user.setPlanCode(plan);
+        user.setPlanStartedAt(Instant.now());
         userRepository.save(user);
         int used = user.getAtelier() == null ? 0 : 1;
-        return toDto(plan, used);
+        return toDto(planOffreService.resolve(plan, user.getPlanStartedAt()), used);
     }
 
     public void assertSms() {
         if (!courant().sms()) {
             throw ApiException.forbidden(
-                    "Les SMS sont inclus à partir de l’offre Standard. Passez à une offre supérieure pour en envoyer.");
+                    "Les SMS sont inclus à partir de l’offre Standard, ou pendant la période d’essai. Passez à une offre supérieure pour en envoyer.");
         }
     }
 
@@ -101,20 +105,22 @@ public class AbonnementService {
         return cursor;
     }
 
-    private PlanCode planDeLaMaison(User courant, Atelier racine) {
-        PlanCode plan = null;
+    private EffectivePlan maison(User courant, Atelier racine) {
+        PlanCode plan = courant.getPlanCode() == null ? PlanCode.GRATUIT : courant.getPlanCode();
+        Instant started = courant.getPlanStartedAt();
         if (racine != null) {
-            for (String code : userRepository.findAdminPlanCodes(racine.getId())) {
-                PlanCode candidat = PlanCode.from(code);
-                if (plan == null || rang(candidat) > rang(plan)) {
+            for (User admin : userRepository.findAdminsByAtelierId(racine.getId(), RoleCode.ADMIN)) {
+                PlanCode candidat = admin.getPlanCode() == null ? PlanCode.GRATUIT : admin.getPlanCode();
+                if (rang(candidat) > rang(plan)) {
                     plan = candidat;
+                    started = admin.getPlanStartedAt();
+                } else if (rang(candidat) == rang(plan) && admin.getPlanStartedAt() != null
+                        && (started == null || admin.getPlanStartedAt().isBefore(started))) {
+                    started = admin.getPlanStartedAt();
                 }
             }
         }
-        if (plan != null) {
-            return plan;
-        }
-        return courant.getPlanCode() == null ? PlanCode.GRATUIT : courant.getPlanCode();
+        return planOffreService.resolve(plan, started);
     }
 
     private int rang(PlanCode plan) {
@@ -127,15 +133,19 @@ public class AbonnementService {
         };
     }
 
-    private AbonnementDto toDto(PlanCode plan, int used) {
+    private AbonnementDto toDto(EffectivePlan plan, int used) {
         return new AbonnementDto(
-                plan.name(),
-                plan.getLibelle(),
+                plan.code(),
+                plan.libelle(),
                 used,
-                plan.getMaxAteliers(),
+                plan.maxAteliers(),
                 plan.illimite(),
                 plan.peutCreer(used),
-                plan.autoriseSms(),
-                smsGatewayService.isReady());
+                plan.sms(),
+                smsGatewayService.isReady(),
+                plan.essai(),
+                plan.essaiJours(),
+                plan.essaiJoursRestants(),
+                plan.essaiFin());
     }
 }
