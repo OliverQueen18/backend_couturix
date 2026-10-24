@@ -1,5 +1,6 @@
 package com.couturix.user;
 
+import com.couturix.domain.enums.RoleCode;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,4 +21,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
               AND r.code = 'ADMIN'
             """, nativeQuery = true)
     List<String> findAdminPlanCodes(@Param("atelierId") Long atelierId);
+
+    long countDistinctByRoles_Code(RoleCode code);
 }

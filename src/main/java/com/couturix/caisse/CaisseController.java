@@ -32,6 +32,11 @@ public class CaisseController {
         return service.courante();
     }
 
+    @GetMapping("/categories-operation")
+    public List<String> categories() {
+        return service.categoriesOperation();
+    }
+
     @PostMapping("/ouvrir")
     public Caisse ouvrir(@RequestBody Map<String, Object> body) {
         return service.ouvrir(JsonMaps.decimal(body, "soldeInitial"));

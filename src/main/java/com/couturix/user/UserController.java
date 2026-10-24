@@ -16,7 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
 public class UserController {
     private final UserService userService;
-    @GetMapping public PageResponse<UserDto> list(Pageable pageable) { return userService.list(pageable); }
+    @GetMapping public PageResponse<UserDto> list(
+            @RequestParam(required = false) String role,
+            Pageable pageable) {
+        return userService.list(role, pageable);
+    }
     @GetMapping("/{id}") public UserDto get(@PathVariable Long id) { return userService.get(id); }
     @PostMapping public UserDto create(@Valid @RequestBody UserRequest request) { return userService.create(request); }
     @PutMapping("/{id}") public UserDto update(@PathVariable Long id, @Valid @RequestBody UserRequest request) { return userService.update(id, request); }

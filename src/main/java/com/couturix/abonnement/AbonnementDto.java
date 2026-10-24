@@ -6,5 +6,7 @@ public record AbonnementDto(
         int ateliersUtilises,
         Integer ateliersMax,
         boolean illimite,
-        boolean peutCreer
+        boolean peutCreer,
+        boolean sms,
+        boolean smsGatewayReady
 ) {}

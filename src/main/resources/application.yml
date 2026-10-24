@@ -74,6 +74,12 @@ couturix:
       api-url: ${WHATSAPP_API_URL:https://graph.facebook.com/v20.0}
       phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
       access-token: ${WHATSAPP_ACCESS_TOKEN:}
+    sms:
+      enabled: ${SMS_GATEWAY_ENABLED:false}
+      api-key: ${SMS_GATEWAY_API_KEY:}
+      url: ${SMS_GATEWAY_URL:https://europe-west1-sms-gateway-api-simpapp.cloudfunctions.net/api_v2_sms_send}
+      request-timeout-seconds: ${SMS_GATEWAY_TIMEOUT_SECONDS:10}
+      default-country-code: ${SMS_GATEWAY_DEFAULT_COUNTRY_CODE:+223}
   bootstrap:
     admin-email: ${ADMIN_EMAIL:admin@couturix.local}
     admin-password: ${ADMIN_PASSWORD:Admin123!}

@@ -1,8 +1,6 @@
 package com.couturix.stock.dto;
 
-import com.couturix.domain.enums.UniteStock;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record ArticleStockRequest(
@@ -10,7 +8,7 @@ public record ArticleStockRequest(
         Long fournisseurId,
         @NotBlank String nom,
         @NotBlank String sku,
-        @NotNull UniteStock unite,
+        @NotBlank String unite,
         BigDecimal stockMinimum,
         BigDecimal prixAchat,
         BigDecimal prixVente,

@@ -48,12 +48,13 @@ public class StockService {
 
   @Transactional @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','MAGASINIER')")
   public ArticleStock saveArticle(ArticleStock incoming) {
+    incoming.setUnite(normalizeUnite(incoming.getUnite()));
     if (incoming.getId() != null) {
       ArticleStock existing = articleRepository.findById(incoming.getId())
           .orElseThrow(() -> ApiException.notFound("Article introuvable"));
       existing.setNom(incoming.getNom());
       existing.setSku(incoming.getSku());
-      if (incoming.getUnite() != null) existing.setUnite(incoming.getUnite());
+      existing.setUnite(incoming.getUnite());
       if (incoming.getStockMinimum() != null) existing.setStockMinimum(incoming.getStockMinimum());
       if (incoming.getPrixAchat() != null) existing.setPrixAchat(incoming.getPrixAchat());
       existing.setPrixVente(incoming.getPrixVente());
@@ -147,5 +148,16 @@ public class StockService {
 
   private static BigDecimal nvl(BigDecimal v) {
     return v == null ? BigDecimal.ZERO : v;
+  }
+
+  private String normalizeUnite(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return "UNITE";
+    }
+    String value = raw.trim().replaceAll("\\s+", " ");
+    if (value.length() > 30) {
+      throw ApiException.badRequest("Unité trop longue (30 caractères maximum)");
+    }
+    return value;
   }
 }

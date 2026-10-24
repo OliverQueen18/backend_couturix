@@ -29,8 +29,20 @@ public class UserService {
     private final AbonnementService abonnementService;
 
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> list(Pageable pageable) {
-        return PageResponse.of(userRepository.findAll(pageable).map(this::toDto));
+    public PageResponse<UserDto> list(String role, Pageable pageable) {
+        if (role == null || role.isBlank()) {
+            return PageResponse.of(userRepository.findAll(pageable).map(this::toDto));
+        }
+        RoleCode code;
+        try {
+            code = RoleCode.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw ApiException.badRequest("Rôle inconnu");
+        }
+        return PageResponse.of(userRepository.findAll((root, query, cb) -> {
+            query.distinct(true);
+            return cb.equal(root.join("roles").get("code"), code);
+        }, pageable).map(this::toDto));
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +78,9 @@ public class UserService {
         if (request.password() != null && !request.password().isBlank()) user.setPasswordHash(passwordEncoder.encode(request.password()));
         if (request.roles() != null) user.setRoles(resolveRoles(request.roles()));
         if (request.plan() != null && !request.plan().isBlank() && SecurityUtils.hasRole("SUPER_ADMIN")) {
-            user.setPlanCode(abonnementService.parse(request.plan()));
+            boolean ciblePlateforme = user.roleCodes().contains(RoleCode.SUPER_ADMIN)
+                    || (request.roles() != null && request.roles().contains("SUPER_ADMIN"));
+            user.setPlanCode(ciblePlateforme ? PlanCode.PLATEFORME : abonnementService.parse(request.plan()));
         }
         return toDto(userRepository.save(user));
     }

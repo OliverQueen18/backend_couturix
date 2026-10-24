@@ -45,11 +45,12 @@ Aucune clé n’est codée en dur. Voir `.env.example` :
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Bootstrap SUPER_ADMIN |
 | `MAIL_*` | SMTP (Mailhog en local) |
 | `WHATSAPP_*` | API WhatsApp Business |
+| `SMS_GATEWAY_*` | Envoi SMS (Android SMS Gateway), dès l’offre Standard |
 | `STOCK_ALLOW_NEGATIVE` | Sorties de stock négatives |
 
 ## Modules
 
-Authentification, utilisateurs/rôles, clients & mesures, modèles, commandes & production, stocks, fournisseurs, caisse, paiements, tailleurs & paie, compositions, moteur de coûts, simulateur, devis, notifications e-mail/WhatsApp, tableau de bord, rapports, administration.
+Authentification, utilisateurs/rôles, clients & mesures, modèles, commandes & production, stocks, fournisseurs, caisse, paiements, tailleurs & paie, compositions, moteur de coûts, simulateur, devis, notifications e-mail/WhatsApp/SMS, tableau de bord, rapports, administration.
 
 ## Tests
 

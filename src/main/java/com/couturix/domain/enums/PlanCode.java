@@ -4,7 +4,8 @@ public enum PlanCode {
     GRATUIT("Gratuit", 1),
     STANDARD("Standard", 1),
     PREMIUM("Premium", 5),
-    GOLD("Gold", null);
+    GOLD("Gold", null),
+    PLATEFORME("Super administrateur", null);
 
     private final String libelle;
     private final Integer maxAteliers;
@@ -28,6 +29,15 @@ public enum PlanCode {
 
     public boolean peutCreer(int ateliersExistants) {
         return illimite() || ateliersExistants < maxAteliers;
+    }
+
+    /** SMS clients via SMS Gateway, à partir de l’offre Standard. */
+    public boolean autoriseSms() {
+        return this != GRATUIT;
+    }
+
+    public boolean offreAtelier() {
+        return this != PLATEFORME;
     }
 
     public static PlanCode from(String raw) {

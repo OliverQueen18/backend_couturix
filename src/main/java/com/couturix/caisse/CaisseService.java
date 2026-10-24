@@ -2,6 +2,9 @@ package com.couturix.caisse;
 import com.couturix.common.exception.ApiException;
 import com.couturix.domain.enums.*;
 import java.math.BigDecimal; import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional;
@@ -44,12 +47,59 @@ public class CaisseService {
     return caisseRepository.save(c);
   }
 
+  public List<String> categoriesOperation() {
+    LinkedHashSet<String> all = new LinkedHashSet<>(List.of(
+        CategorieOperationCaisse.PAIEMENT_CLIENT.name(),
+        CategorieOperationCaisse.ACHAT.name(),
+        CategorieOperationCaisse.SALAIRE.name(),
+        CategorieOperationCaisse.AVANCE.name(),
+        CategorieOperationCaisse.AUTRE.name()));
+    for (String value : operationRepository.findDistinctCategories()) {
+      if (value != null && !value.isBlank()) {
+        all.add(value.trim());
+      }
+    }
+    return List.copyOf(all);
+  }
+
   @Transactional
   public CaisseOperation operation(TypeOperationCaisse type, CategorieOperationCaisse cat, BigDecimal montant, MoyenPaiement moyen, String motif, String ref) {
+    return operation(type, cat == null ? null : cat.name(), montant, moyen, motif, ref);
+  }
+
+  @Transactional
+  public CaisseOperation operation(TypeOperationCaisse type, String cat, BigDecimal montant, MoyenPaiement moyen, String motif, String ref) {
     Caisse c = caisseRepository.findFirstByStatut(CaisseStatut.OUVERTE).orElseThrow(() -> ApiException.badRequest("Aucune caisse ouverte"));
     CaisseOperation op = new CaisseOperation();
-    op.setCaisse(c); op.setTypeOperation(type); op.setCategorie(cat); op.setMontant(montant); op.setMoyenPaiement(moyen==null?MoyenPaiement.ESPECES:moyen); op.setMotif(motif); op.setReferenceMetier(ref);
+    op.setCaisse(c); op.setTypeOperation(type); op.setCategorie(normalizeCategorie(cat)); op.setMontant(montant); op.setMoyenPaiement(moyen==null?MoyenPaiement.ESPECES:moyen); op.setMotif(motif); op.setReferenceMetier(ref);
     return operationRepository.save(op);
+  }
+
+  String normalizeCategorie(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return CategorieOperationCaisse.AUTRE.name();
+    }
+    String value = raw.trim().replaceAll("\\s+", " ");
+    if (value.length() > 80) {
+      throw ApiException.badRequest("Catégorie trop longue (80 caractères maximum)");
+    }
+    String key = value.toLowerCase(Locale.FRENCH);
+    for (CategorieOperationCaisse known : CategorieOperationCaisse.values()) {
+      if (known.name().equalsIgnoreCase(value) || label(known).equalsIgnoreCase(key)) {
+        return known.name();
+      }
+    }
+    return value;
+  }
+
+  private static String label(CategorieOperationCaisse categorie) {
+    return switch (categorie) {
+      case PAIEMENT_CLIENT -> "Paiement client";
+      case ACHAT -> "Achat";
+      case SALAIRE -> "Salaire";
+      case AVANCE -> "Avance";
+      case AUTRE -> "Autre";
+    };
   }
 
   @Transactional @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT','CAISSIER')")

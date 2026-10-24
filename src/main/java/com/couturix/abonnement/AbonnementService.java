@@ -6,6 +6,7 @@ import com.couturix.atelier.TenantService;
 import com.couturix.common.exception.ApiException;
 import com.couturix.common.tenant.TenantContext;
 import com.couturix.domain.enums.PlanCode;
+import com.couturix.notification.SmsGatewayService;
 import com.couturix.security.SecurityUtils;
 import com.couturix.user.User;
 import com.couturix.user.UserRepository;
@@ -20,13 +21,14 @@ public class AbonnementService {
     private final UserRepository userRepository;
     private final AtelierRepository atelierRepository;
     private final TenantService tenantService;
+    private final SmsGatewayService smsGatewayService;
 
     @Transactional(readOnly = true)
     public AbonnementDto courant() {
         boolean bypass = TenantContext.current().map(TenantContext.Snapshot::bypass).orElse(false);
         if (bypass || SecurityUtils.hasRole("SUPER_ADMIN")) {
             int used = TenantContext.current().map(snapshot -> snapshot.scopeIds().size()).orElse(0);
-            return new AbonnementDto(PlanCode.GOLD.name(), "Gold", used, null, true, true);
+            return toDto(PlanCode.PLATEFORME, used);
         }
         User user = userRepository.findById(SecurityUtils.currentUserId())
                 .orElseThrow(() -> ApiException.unauthorized("Non authentifié"));
@@ -46,6 +48,21 @@ public class AbonnementService {
         return toDto(plan, used);
     }
 
+    public void assertSms() {
+        if (!courant().sms()) {
+            throw ApiException.forbidden(
+                    "Les SMS sont inclus à partir de l’offre Standard. Passez à une offre supérieure pour en envoyer.");
+        }
+    }
+
+    public boolean smsAutorise() {
+        try {
+            return courant().sms();
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
     public void assertPeutCreer() {
         if (TenantContext.current().map(TenantContext.Snapshot::bypass).orElse(false)
                 || SecurityUtils.hasRole("SUPER_ADMIN")) {
@@ -62,7 +79,11 @@ public class AbonnementService {
 
     public PlanCode parse(String raw) {
         try {
-            return PlanCode.from(raw);
+            PlanCode plan = PlanCode.from(raw);
+            if (!plan.offreAtelier()) {
+                throw new IllegalArgumentException("not an atelier plan");
+            }
+            return plan;
         } catch (IllegalArgumentException ex) {
             throw ApiException.badRequest("Abonnement inconnu");
         }
@@ -102,6 +123,7 @@ public class AbonnementService {
             case STANDARD -> 1;
             case PREMIUM -> 2;
             case GOLD -> 3;
+            case PLATEFORME -> 4;
         };
     }
 
@@ -112,6 +134,8 @@ public class AbonnementService {
                 used,
                 plan.getMaxAteliers(),
                 plan.illimite(),
-                plan.peutCreer(used));
+                plan.peutCreer(used),
+                plan.autoriseSms(),
+                smsGatewayService.isReady());
     }
 }

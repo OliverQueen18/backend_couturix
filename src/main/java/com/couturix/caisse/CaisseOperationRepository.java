@@ -13,6 +13,9 @@ public interface CaisseOperationRepository extends JpaRepository<CaisseOperation
 
     List<CaisseOperation> findByCaisseId(Long caisseId);
 
+    @Query("select distinct o.categorie from CaisseOperation o where o.categorie is not null and o.categorie <> '' order by o.categorie")
+    List<String> findDistinctCategories();
+
     @Query("""
             SELECT COALESCE(SUM(o.montant), 0) FROM CaisseOperation o
             WHERE o.typeOperation = :type AND o.createdAt >= :from AND o.createdAt < :to

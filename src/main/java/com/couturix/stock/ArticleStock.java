@@ -2,7 +2,6 @@ package com.couturix.stock;
 import com.couturix.atelier.Atelier;
 import com.couturix.common.tenant.TenantAssigner;
 import com.couturix.common.tenant.TenantOwned;
-import com.couturix.domain.enums.UniteStock;
 import com.couturix.fournisseur.Fournisseur;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -20,7 +19,7 @@ public class ArticleStock implements TenantOwned {
   @ManyToOne @JoinColumn(name="fournisseur_id") private Fournisseur fournisseur;
   @Column(nullable=false, length=180) private String nom;
   @Column(nullable=false, unique=true, length=60) private String sku;
-  @Enumerated(EnumType.STRING) @Column(nullable=false, length=30) private UniteStock unite = UniteStock.UNITE;
+  @Column(nullable=false, length=30) private String unite = "UNITE";
   @Column(name="stock_actuel", nullable=false, precision=14, scale=3) private BigDecimal stockActuel = BigDecimal.ZERO;
   @Column(name="stock_minimum", nullable=false, precision=14, scale=3) private BigDecimal stockMinimum = BigDecimal.ZERO;
   @Column(name="prix_achat", nullable=false, precision=14, scale=2) private BigDecimal prixAchat = BigDecimal.ZERO;

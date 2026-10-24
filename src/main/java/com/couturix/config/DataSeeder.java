@@ -90,7 +90,7 @@ public class DataSeeder implements CommandLineRunner {
         admin.setMustChangePassword(true);
         admin.setEmailVerified(true);
         admin.setAtelier(atelier);
-        admin.setPlanCode(PlanCode.GOLD);
+        admin.setPlanCode(PlanCode.PLATEFORME);
         roleRepository.findByCode(RoleCode.SUPER_ADMIN).ifPresent(role -> admin.setRoles(Set.of(role)));
         userRepository.save(admin);
         log.info("Compte SUPER_ADMIN initial créé : {}", admin.getEmail());

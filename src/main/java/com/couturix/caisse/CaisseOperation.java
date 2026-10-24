@@ -11,7 +11,7 @@ public class CaisseOperation {
   @JsonIgnore
   @ManyToOne(optional=false) @JoinColumn(name="caisse_id") private Caisse caisse;
   @Enumerated(EnumType.STRING) @Column(name="type_operation", nullable=false, length=20) private TypeOperationCaisse typeOperation;
-  @Enumerated(EnumType.STRING) @Column(nullable=false, length=40) private CategorieOperationCaisse categorie;
+  @Column(nullable=false, length=80) private String categorie;
   @Column(nullable=false, precision=14, scale=2) private BigDecimal montant;
   @Enumerated(EnumType.STRING) @Column(name="moyen_paiement", nullable=false, length=30) private MoyenPaiement moyenPaiement;
   @Column(nullable=false) private String motif;

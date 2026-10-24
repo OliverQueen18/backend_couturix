@@ -1,6 +1,5 @@
 package com.couturix.stock.dto;
 
-import com.couturix.domain.enums.UniteStock;
 import java.math.BigDecimal;
 
 public record ArticleStockDto(
@@ -11,7 +10,7 @@ public record ArticleStockDto(
         String fournisseurNom,
         String nom,
         String sku,
-        UniteStock unite,
+        String unite,
         BigDecimal stockActuel,
         BigDecimal stockMinimum,
         BigDecimal prixAchat,
