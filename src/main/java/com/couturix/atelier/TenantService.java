@@ -18,13 +18,14 @@ public class TenantService {
 
     @Transactional(readOnly = true)
     public TenantContext.Snapshot snapshotFor(User user) {
-        boolean superAdmin = user.roleCodes().stream().anyMatch(code -> "SUPER_ADMIN".equals(code.name()));
+        boolean platform = user.roleCodes().stream()
+                .anyMatch(code -> "SUPER_ADMIN".equals(code.name()) || "ADMIN".equals(code.name()));
         Atelier atelier = user.getAtelier();
         if (atelier == null) {
-            return new TenantContext.Snapshot(null, null, List.of(), superAdmin, null);
+            return new TenantContext.Snapshot(null, null, List.of(), platform, null);
         }
-        List<Long> scope = superAdmin ? List.of() : collectScope(atelier.getId());
-        return new TenantContext.Snapshot(atelier.getId(), atelier.getNom(), scope, superAdmin, atelier);
+        List<Long> scope = platform ? List.of() : collectScope(atelier.getId());
+        return new TenantContext.Snapshot(atelier.getId(), atelier.getNom(), scope, platform, atelier);
     }
 
     public List<Long> collectScope(Long rootId) {

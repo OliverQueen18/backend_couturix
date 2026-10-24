@@ -43,6 +43,6 @@ class AtelierRegisterTest {
                 .andExpect(jsonPath("$.accessToken", notNullValue()))
                 .andExpect(jsonPath("$.atelierNom").value("Maison Ciseaux"))
                 .andExpect(jsonPath("$.emailVerified").value(false))
-                .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.hasItem("ADMIN")));
+                .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.hasItem("GERANT")));
     }
 }

@@ -5,5 +5,6 @@ import java.util.List;
 public record SiteSnapshotDto(
         SiteSettingsDto settings,
         List<SiteMenuDto> menus,
-        List<SitePageDto> pages
+        List<SitePageDto> pages,
+        List<SiteSlideDto> slides
 ) {}

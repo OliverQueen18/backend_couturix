@@ -4,9 +4,12 @@ import com.couturix.site.dto.PlatformOverviewDto;
 import com.couturix.site.dto.SiteMenuDto;
 import com.couturix.site.dto.SitePageDto;
 import com.couturix.site.dto.SiteSettingsDto;
+import com.couturix.site.dto.SiteSlideDto;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +18,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -78,5 +83,30 @@ public class AdminSiteController {
     @DeleteMapping("/pages/{id}")
     public void deletePage(@PathVariable Long id) {
         cms.deletePage(id);
+    }
+
+    @GetMapping("/slides")
+    public List<SiteSlideDto> slides() {
+        return cms.slides();
+    }
+
+    @PostMapping("/slides")
+    public SiteSlideDto createSlide(@RequestBody SiteSlideDto body) {
+        return cms.saveSlide(null, body);
+    }
+
+    @PutMapping("/slides/{id}")
+    public SiteSlideDto updateSlide(@PathVariable Long id, @RequestBody SiteSlideDto body) {
+        return cms.saveSlide(id, body);
+    }
+
+    @DeleteMapping("/slides/{id}")
+    public void deleteSlide(@PathVariable Long id) {
+        cms.deleteSlide(id);
+    }
+
+    @PostMapping(value = "/slides/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, String> uploadSlideImage(@RequestParam("file") MultipartFile file) {
+        return Map.of("url", cms.uploadSlideImage(file));
     }
 }

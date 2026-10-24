@@ -12,6 +12,10 @@ import com.couturix.security.SecurityUtils;
 import com.couturix.user.User;
 import com.couturix.user.UserRepository;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,6 +97,16 @@ public class AbonnementService {
         }
     }
 
+    private List<User> atelierHolders(Long atelierId) {
+        Map<Long, User> holders = new LinkedHashMap<>();
+        for (RoleCode role : List.of(RoleCode.GERANT, RoleCode.ADMIN)) {
+            for (User user : userRepository.findAdminsByAtelierId(atelierId, role)) {
+                holders.putIfAbsent(user.getId(), user);
+            }
+        }
+        return new ArrayList<>(holders.values());
+    }
+
     private Atelier racine() {
         Long id = TenantContext.current().map(TenantContext.Snapshot::atelierId).orElse(null);
         if (id == null) {
@@ -109,7 +123,7 @@ public class AbonnementService {
         PlanCode plan = courant.getPlanCode() == null ? PlanCode.GRATUIT : courant.getPlanCode();
         Instant started = courant.getPlanStartedAt();
         if (racine != null) {
-            for (User admin : userRepository.findAdminsByAtelierId(racine.getId(), RoleCode.ADMIN)) {
+            for (User admin : atelierHolders(racine.getId())) {
                 PlanCode candidat = admin.getPlanCode() == null ? PlanCode.GRATUIT : admin.getPlanCode();
                 if (rang(candidat) > rang(plan)) {
                     plan = candidat;

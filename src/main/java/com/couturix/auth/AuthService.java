@@ -116,8 +116,8 @@ public class AuthService {
         user.setPlanCode(abonnementService.parse(request.plan()));
         user.setPlanStartedAt(Instant.now());
         user.setAtelier(atelier);
-        user.setRoles(Set.of(roleRepository.findByCode(RoleCode.ADMIN)
-                .orElseThrow(() -> ApiException.badRequest("Rôle ADMIN introuvable"))));
+        user.setRoles(Set.of(roleRepository.findByCode(RoleCode.GERANT)
+                .orElseThrow(() -> ApiException.badRequest("Rôle GERANT introuvable"))));
         user = userRepository.save(user);
         otpService.issue(user.getEmail(), OtpPurpose.EMAIL_VERIFY);
         auditService.log(user.getId(), "REGISTER_ATELIER", "ATELIER", atelier.getId(), atelier.getNom());

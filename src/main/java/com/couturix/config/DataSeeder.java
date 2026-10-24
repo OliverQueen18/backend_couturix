@@ -32,8 +32,8 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final Map<RoleCode, String> ROLE_LABELS = Map.of(
             RoleCode.SUPER_ADMIN, "Super administrateur",
-            RoleCode.ADMIN, "Administrateur",
-            RoleCode.GERANT, "Gérant",
+            RoleCode.ADMIN, "Administrateur CouturiX",
+            RoleCode.GERANT, "Administrateur d’atelier",
             RoleCode.CAISSIER, "Caissier",
             RoleCode.RECEPTIONNISTE, "Réceptionniste",
             RoleCode.TAILLEUR, "Tailleur",
@@ -55,12 +55,17 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         ROLE_LABELS.forEach((code, libelle) -> {
-            if (roleRepository.findByCode(code).isEmpty()) {
+            roleRepository.findByCode(code).ifPresentOrElse(role -> {
+                if (!libelle.equals(role.getLibelle())) {
+                    role.setLibelle(libelle);
+                    roleRepository.save(role);
+                }
+            }, () -> {
                 Role role = new Role();
                 role.setCode(code);
                 role.setLibelle(libelle);
                 roleRepository.save(role);
-            }
+            });
         });
         parametreRepository.findById("stock.allowNegative").orElseGet(() -> {
             Parametre p = new Parametre();

@@ -30,4 +30,17 @@ public final class SecurityUtils {
                 .map(p -> p.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + role)))
                 .orElse(false);
     }
+
+    public static boolean hasAnyRole(String... roles) {
+        for (String role : roles) {
+            if (hasRole(role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isPlatformTeam() {
+        return hasAnyRole("SUPER_ADMIN", "ADMIN");
+    }
 }

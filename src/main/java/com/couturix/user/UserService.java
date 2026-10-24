@@ -1,5 +1,7 @@
 package com.couturix.user;
 import com.couturix.abonnement.AbonnementService;
+import com.couturix.atelier.Atelier;
+import com.couturix.atelier.AtelierRepository;
 import com.couturix.common.api.PageResponse;
 import com.couturix.common.audit.AuditService;
 import com.couturix.common.exception.ApiException;
@@ -9,7 +11,9 @@ import com.couturix.domain.enums.RoleCode;
 import com.couturix.security.SecurityUtils;
 import com.couturix.user.dto.UserDto;
 import com.couturix.user.dto.UserRequest;
+import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,13 +31,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final AtelierRepository atelierRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final AbonnementService abonnementService;
 
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> list(String role, Pageable pageable) {
-        Specification<User> spec = scopeSpec();
+    public PageResponse<UserDto> list(String role, String q, Long atelierId, Pageable pageable) {
+        Specification<User> spec = scopeSpec(atelierId);
+        if (q != null && !q.isBlank()) {
+            String like = "%" + q.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                predicates.add(cb.like(cb.lower(root.get("nom")), like));
+                predicates.add(cb.like(cb.lower(root.get("prenom")), like));
+                predicates.add(cb.like(cb.lower(root.get("email")), like));
+                return cb.or(predicates.toArray(Predicate[]::new));
+            });
+        }
         if (role != null && !role.isBlank()) {
             RoleCode code;
             try {
@@ -53,7 +68,7 @@ public class UserService {
     public UserDto get(Long id) { return toDto(require(id)); }
 
     @Transactional
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
     public UserDto create(UserRequest request) {
         if (userRepository.existsByEmailIgnoreCase(request.email())) throw ApiException.conflict("Email déjà utilisé");
         User user = new User();
@@ -67,11 +82,12 @@ public class UserService {
         user.setRoles(resolveRoles(request.roles()));
         user.setPlanStartedAt(Instant.now());
         if (SecurityUtils.hasRole("SUPER_ADMIN") && request.plan() != null && !request.plan().isBlank()) {
-            boolean ciblePlateforme = user.roleCodes().contains(RoleCode.SUPER_ADMIN);
+            boolean ciblePlateforme = user.roleCodes().contains(RoleCode.SUPER_ADMIN)
+                    || user.roleCodes().contains(RoleCode.ADMIN);
             user.setPlanCode(ciblePlateforme ? PlanCode.PLATEFORME : abonnementService.parse(request.plan()));
         }
-        TenantContext.atelier().ifPresent(user::setAtelier);
-        if (!SecurityUtils.hasRole("SUPER_ADMIN") && user.getAtelier() == null) {
+        assignAtelier(user, request.atelierId());
+        if (!SecurityUtils.isPlatformTeam() && user.getAtelier() == null) {
             throw ApiException.forbidden("Rattachez l’utilisateur à votre atelier");
         }
         User saved = userRepository.save(user);
@@ -80,7 +96,7 @@ public class UserService {
     }
 
     @Transactional
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
     public UserDto update(Long id, UserRequest request) {
         User user = require(id);
         user.setNom(request.nom());
@@ -89,6 +105,9 @@ public class UserService {
         user.setActif(request.actif());
         if (request.password() != null && !request.password().isBlank()) user.setPasswordHash(passwordEncoder.encode(request.password()));
         if (request.roles() != null) user.setRoles(resolveRoles(request.roles()));
+        if (SecurityUtils.isPlatformTeam() && request.atelierId() != null) {
+            assignAtelier(user, request.atelierId());
+        }
         if (request.plan() != null && !request.plan().isBlank() && SecurityUtils.hasRole("SUPER_ADMIN")) {
             boolean ciblePlateforme = user.roleCodes().contains(RoleCode.SUPER_ADMIN)
                     || (request.roles() != null && request.roles().contains("SUPER_ADMIN"));
@@ -102,7 +121,7 @@ public class UserService {
     }
 
     @Transactional
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
     public UserDto toggle(Long id, boolean actif) {
         User user = require(id);
         user.setActif(actif);
@@ -113,6 +132,7 @@ public class UserService {
         Set<Role> roles = new HashSet<>();
         if (codes == null) return roles;
         boolean superAdmin = SecurityUtils.hasRole("SUPER_ADMIN");
+        boolean platform = SecurityUtils.isPlatformTeam();
         for (String c : codes) {
             RoleCode code;
             try {
@@ -120,8 +140,11 @@ public class UserService {
             } catch (IllegalArgumentException ex) {
                 throw ApiException.badRequest("Rôle inconnu: " + c);
             }
-            if (!superAdmin && code == RoleCode.SUPER_ADMIN) {
-                throw ApiException.forbidden("Ce rôle est réservé à la plateforme");
+            if (code == RoleCode.SUPER_ADMIN && !superAdmin) {
+                throw ApiException.forbidden("Ce rôle est réservé à l’équipe CouturiX");
+            }
+            if (code == RoleCode.ADMIN && !platform) {
+                throw ApiException.forbidden("Ce rôle est réservé à l’équipe CouturiX");
             }
             roles.add(roleRepository.findByCode(code).orElseThrow(() -> ApiException.badRequest("Rôle inconnu: " + c)));
         }
@@ -134,8 +157,18 @@ public class UserService {
         return user;
     }
 
+    private void assignAtelier(User user, Long atelierId) {
+        if (SecurityUtils.isPlatformTeam() && atelierId != null) {
+            Atelier atelier = atelierRepository.findById(atelierId)
+                    .orElseThrow(() -> ApiException.notFound("Atelier introuvable"));
+            user.setAtelier(atelier);
+            return;
+        }
+        TenantContext.atelier().ifPresent(user::setAtelier);
+    }
+
     private void assertVisible(User user) {
-        if (SecurityUtils.hasRole("SUPER_ADMIN")) {
+        if (SecurityUtils.isPlatformTeam()) {
             return;
         }
         Long atelierId = user.getAtelier() == null ? null : user.getAtelier().getId();
@@ -145,9 +178,12 @@ public class UserService {
         }
     }
 
-    private Specification<User> scopeSpec() {
-        if (SecurityUtils.hasRole("SUPER_ADMIN")) {
-            return (root, query, cb) -> cb.conjunction();
+    private Specification<User> scopeSpec(Long atelierId) {
+        if (SecurityUtils.isPlatformTeam()) {
+            if (atelierId == null) {
+                return (root, query, cb) -> cb.conjunction();
+            }
+            return (root, query, cb) -> cb.equal(root.get("atelier").get("id"), atelierId);
         }
         List<Long> ids = TenantContext.current().map(TenantContext.Snapshot::scopeIds).orElse(List.of());
         if (ids.isEmpty()) {

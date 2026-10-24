@@ -5,5 +5,6 @@ public record PlatformOverviewDto(
         long utilisateurs,
         long comptesClients,
         long pages,
-        long menus
+        long menus,
+        long slides
 ) {}

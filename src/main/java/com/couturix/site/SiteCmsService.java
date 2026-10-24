@@ -8,7 +8,9 @@ import com.couturix.site.dto.PlatformOverviewDto;
 import com.couturix.site.dto.SiteMenuDto;
 import com.couturix.site.dto.SitePageDto;
 import com.couturix.site.dto.SiteSettingsDto;
+import com.couturix.site.dto.SiteSlideDto;
 import com.couturix.site.dto.SiteSnapshotDto;
+import com.couturix.storage.FileStorageService;
 import com.couturix.user.UserRepository;
 import java.text.Normalizer;
 import java.time.Instant;
@@ -18,17 +20,21 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
 public class SiteCmsService {
 
+    private static final int MAX_SLIDES = 12;
     private static final Set<String> RESERVED_SLUGS = Set.of(
             "a-propos", "contact", "partenaires", "conditions-utilisation", "politique-confidentialite");
 
     private final SiteSettingsRepository settingsRepository;
     private final SiteMenuRepository menuRepository;
     private final SitePageRepository pageRepository;
+    private final SiteSlideRepository slideRepository;
+    private final FileStorageService fileStorageService;
     private final AtelierRepository atelierRepository;
     private final UserRepository userRepository;
 
@@ -40,7 +46,10 @@ public class SiteCmsService {
         List<SiteMenuDto> menus = menuRepository.findByVisibleTrueOrderByLocationAscSortOrderAscIdAsc().stream()
                 .map(this::toMenu)
                 .toList();
-        return new SiteSnapshotDto(toSettings(settings()), menus, pages);
+        List<SiteSlideDto> slides = slideRepository.findByVisibleTrueOrderBySortOrderAscIdAsc().stream()
+                .map(this::toSlide)
+                .toList();
+        return new SiteSnapshotDto(toSettings(settings()), menus, pages, slides);
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +67,8 @@ public class SiteCmsService {
                 userRepository.count(),
                 userRepository.countDistinctByRoles_Code(RoleCode.CLIENT),
                 pageRepository.count(),
-                menuRepository.count());
+                menuRepository.count(),
+                slideRepository.count());
     }
 
     @Transactional(readOnly = true)
@@ -157,6 +167,41 @@ public class SiteCmsService {
         pageRepository.delete(page);
     }
 
+    @Transactional(readOnly = true)
+    public List<SiteSlideDto> slides() {
+        return slideRepository.findAllByOrderBySortOrderAscIdAsc().stream().map(this::toSlide).toList();
+    }
+
+    @Transactional
+    public SiteSlideDto saveSlide(Long id, SiteSlideDto dto) {
+        SiteSlide slide = id == null ? new SiteSlide() : slideRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Slide introuvable"));
+        if (id == null && slideRepository.count() >= MAX_SLIDES) {
+            throw ApiException.badRequest("Au plus 12 images dans le slider.");
+        }
+        slide.setKicker(trimToNull(dto.kicker()));
+        slide.setTitle(requireText(dto.title(), "Titre obligatoire"));
+        slide.setBody(trimToNull(dto.body()));
+        slide.setImageUrl(requireText(dto.imageUrl(), "Image obligatoire"));
+        slide.setCtaLabel(trimToNull(dto.ctaLabel()));
+        slide.setCtaPath(trimToNull(dto.ctaPath()));
+        slide.setSortOrder(dto.sortOrder());
+        slide.setVisible(dto.visible());
+        return toSlide(slideRepository.save(slide));
+    }
+
+    @Transactional
+    public void deleteSlide(Long id) {
+        if (!slideRepository.existsById(id)) {
+            throw ApiException.notFound("Slide introuvable");
+        }
+        slideRepository.deleteById(id);
+    }
+
+    public String uploadSlideImage(MultipartFile file) {
+        return fileStorageService.store(file, "slides");
+    }
+
     private SiteSettings settings() {
         return settingsRepository.findById((short) 1).orElseGet(() -> {
             SiteSettings created = new SiteSettings();
@@ -191,6 +236,19 @@ public class SiteCmsService {
     private SitePageDto toPage(SitePage page) {
         return new SitePageDto(page.getId(), page.getSlug(), page.getTitle(), page.getEyebrow(),
                 page.getLead(), page.getBody(), page.isPublished(), page.getUpdatedAt());
+    }
+
+    private SiteSlideDto toSlide(SiteSlide slide) {
+        return new SiteSlideDto(
+                slide.getId(),
+                slide.getKicker(),
+                slide.getTitle(),
+                slide.getBody(),
+                slide.getImageUrl(),
+                slide.getCtaLabel(),
+                slide.getCtaPath(),
+                slide.getSortOrder(),
+                slide.isVisible());
     }
 
     private String sanitize(String html) {

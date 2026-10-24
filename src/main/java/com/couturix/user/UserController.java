@@ -13,13 +13,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Tag(name = "Utilisateurs")
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','GERANT')")
 public class UserController {
     private final UserService userService;
     @GetMapping public PageResponse<UserDto> list(
             @RequestParam(required = false) String role,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long atelierId,
             Pageable pageable) {
-        return userService.list(role, pageable);
+        return userService.list(role, q, atelierId, pageable);
     }
     @GetMapping("/{id}") public UserDto get(@PathVariable Long id) { return userService.get(id); }
     @PostMapping public UserDto create(@Valid @RequestBody UserRequest request) { return userService.create(request); }
