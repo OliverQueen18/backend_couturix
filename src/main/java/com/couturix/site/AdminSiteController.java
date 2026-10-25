@@ -4,6 +4,7 @@ import com.couturix.site.dto.PlatformOverviewDto;
 import com.couturix.site.dto.SiteMenuDto;
 import com.couturix.site.dto.SitePageDto;
 import com.couturix.site.dto.SiteSettingsDto;
+import com.couturix.site.dto.SiteMediaDto;
 import com.couturix.site.dto.SiteSlideDto;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminSiteController {
 
     private final SiteCmsService cms;
+    private final SiteMediaService media;
 
     @GetMapping("/overview")
     public PlatformOverviewDto overview() {
@@ -108,5 +110,15 @@ public class AdminSiteController {
     @PostMapping(value = "/slides/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, String> uploadSlideImage(@RequestParam("file") MultipartFile file) {
         return Map.of("url", cms.uploadSlideImage(file));
+    }
+
+    @GetMapping("/media")
+    public List<SiteMediaDto> media() {
+        return media.list();
+    }
+
+    @PostMapping(value = "/media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public SiteMediaDto uploadMedia(@RequestParam("file") MultipartFile file) {
+        return media.upload(file);
     }
 }

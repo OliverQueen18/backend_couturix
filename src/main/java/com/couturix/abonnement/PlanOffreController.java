@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/offres")
-@PreAuthorize("hasRole('SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
 public class PlanOffreController {
 
     private final PlanOffreService planOffreService;
@@ -26,6 +26,6 @@ public class PlanOffreController {
 
     @PutMapping("/{code}")
     public PlanOffreDto update(@PathVariable String code, @Valid @RequestBody PlanOffreUpdateRequest body) {
-        return planOffreService.updateTrialDays(code, body.trialDays());
+        return planOffreService.update(code, body);
     }
 }

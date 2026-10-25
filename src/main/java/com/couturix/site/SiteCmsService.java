@@ -10,7 +10,6 @@ import com.couturix.site.dto.SitePageDto;
 import com.couturix.site.dto.SiteSettingsDto;
 import com.couturix.site.dto.SiteSlideDto;
 import com.couturix.site.dto.SiteSnapshotDto;
-import com.couturix.storage.FileStorageService;
 import com.couturix.user.UserRepository;
 import java.text.Normalizer;
 import java.time.Instant;
@@ -34,7 +33,7 @@ public class SiteCmsService {
     private final SiteMenuRepository menuRepository;
     private final SitePageRepository pageRepository;
     private final SiteSlideRepository slideRepository;
-    private final FileStorageService fileStorageService;
+    private final SiteMediaService mediaService;
     private final AtelierRepository atelierRepository;
     private final UserRepository userRepository;
 
@@ -187,6 +186,7 @@ public class SiteCmsService {
         slide.setCtaPath(trimToNull(dto.ctaPath()));
         slide.setSortOrder(dto.sortOrder());
         slide.setVisible(dto.visible());
+        slide.setShowText(dto.showText());
         return toSlide(slideRepository.save(slide));
     }
 
@@ -199,7 +199,7 @@ public class SiteCmsService {
     }
 
     public String uploadSlideImage(MultipartFile file) {
-        return fileStorageService.store(file, "slides");
+        return mediaService.upload(file).url();
     }
 
     private SiteSettings settings() {
@@ -248,7 +248,8 @@ public class SiteCmsService {
                 slide.getCtaLabel(),
                 slide.getCtaPath(),
                 slide.getSortOrder(),
-                slide.isVisible());
+                slide.isVisible(),
+                slide.isShowText());
     }
 
     private String sanitize(String html) {

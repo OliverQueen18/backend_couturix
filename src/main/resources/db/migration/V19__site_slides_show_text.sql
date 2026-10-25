@@ -1,0 +1,2 @@
+ALTER TABLE site_slides
+    ADD COLUMN show_text BOOLEAN NOT NULL DEFAULT TRUE;

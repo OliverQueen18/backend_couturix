@@ -9,5 +9,6 @@ public record SiteSlideDto(
         String ctaLabel,
         String ctaPath,
         int sortOrder,
-        boolean visible
+        boolean visible,
+        boolean showText
 ) {}

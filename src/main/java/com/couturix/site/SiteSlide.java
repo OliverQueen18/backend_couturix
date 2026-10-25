@@ -42,4 +42,7 @@ public class SiteSlide {
 
     @Column(nullable = false)
     private boolean visible = true;
+
+    @Column(name = "show_text", nullable = false)
+    private boolean showText = true;
 }

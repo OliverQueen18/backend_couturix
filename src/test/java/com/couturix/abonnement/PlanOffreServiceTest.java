@@ -19,12 +19,13 @@ import static org.mockito.Mockito.when;
 class PlanOffreServiceTest {
 
     @Mock PlanOffreRepository repository;
+    @Mock PlanOffreCatalog catalog;
 
     PlanOffreService service;
 
     @BeforeEach
     void init() {
-        service = new PlanOffreService(repository);
+        service = new PlanOffreService(repository, catalog);
     }
 
     @Test

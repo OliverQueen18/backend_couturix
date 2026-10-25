@@ -15,6 +15,6 @@ public class PublicOffreController {
 
     @GetMapping
     public List<PlanOffreDto> list() {
-        return planOffreService.list();
+        return planOffreService.listPublic();
     }
 }
