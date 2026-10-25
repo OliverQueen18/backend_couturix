@@ -3,8 +3,6 @@ package com.couturix.config;
 import com.couturix.abonnement.PlanOffreService;
 import com.couturix.admin.Parametre;
 import com.couturix.admin.ParametreRepository;
-import com.couturix.atelier.Atelier;
-import com.couturix.atelier.AtelierRepository;
 import com.couturix.domain.enums.PlanCode;
 import com.couturix.domain.enums.RoleCode;
 import com.couturix.user.Role;
@@ -14,6 +12,7 @@ import com.couturix.tailleur.SpecialiteCatalog;
 import com.couturix.tailleur.SpecialiteRepository;
 import com.couturix.user.User;
 import com.couturix.user.UserRepository;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -45,7 +44,6 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ParametreRepository parametreRepository;
-    private final AtelierRepository atelierRepository;
     private final PasswordEncoder passwordEncoder;
     private final CouturixProperties properties;
     private final SpecialiteRepository specialiteRepository;
@@ -76,32 +74,52 @@ public class DataSeeder implements CommandLineRunner {
         });
         ensureSpecialites();
         planOffreService.ensureDefaults();
-        if (userRepository.count() > 0) {
+        ensureBootstrapAdmin();
+    }
+
+    private void ensureBootstrapAdmin() {
+        String email = properties.bootstrap().adminEmail() == null ? "" : properties.bootstrap().adminEmail().trim();
+        String password = properties.bootstrap().adminPassword();
+        if (email.isBlank() || password == null || password.isBlank()) {
+            log.warn("ADMIN_EMAIL / ADMIN_PASSWORD absents : compte bootstrap non synchronisé");
             return;
         }
-        Atelier atelier = atelierRepository.findBySlug("atelier-principal").orElseGet(() -> {
-            Atelier created = new Atelier();
-            created.setNom(properties.bootstrap().adminNom().equals("Administrateur") ? "CouturiX" : "Atelier principal");
-            created.setSlug("atelier-principal");
-            created.setDescription("Atelier principal CouturiX");
-            created.setPays("Congo");
-            created.setDevise("XOF");
-            created.setActif(true);
-            return atelierRepository.save(created);
-        });
-        User admin = new User();
-        admin.setEmail(properties.bootstrap().adminEmail());
-        admin.setPasswordHash(passwordEncoder.encode(properties.bootstrap().adminPassword()));
-        admin.setNom(properties.bootstrap().adminNom());
-        admin.setPrenom(properties.bootstrap().adminPrenom());
+        Role superAdmin = roleRepository.findByCode(RoleCode.SUPER_ADMIN)
+                .orElseThrow(() -> new IllegalStateException("Rôle SUPER_ADMIN introuvable"));
+        User byEmail = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (byEmail != null && !byEmail.roleCodes().contains(RoleCode.SUPER_ADMIN)) {
+            log.error("ADMIN_EMAIL {} est déjà utilisé par un compte sans rôle SUPER_ADMIN", email);
+            return;
+        }
+        User admin = byEmail != null ? byEmail : findExistingPlatformAdmin();
+        boolean created = admin == null;
+        if (created) {
+            admin = new User();
+            admin.setNom(properties.bootstrap().adminNom());
+            admin.setPrenom(properties.bootstrap().adminPrenom());
+        }
+        admin.setEmail(email);
+        if (admin.getPasswordHash() == null || !passwordEncoder.matches(password, admin.getPasswordHash())) {
+            admin.setPasswordHash(passwordEncoder.encode(password));
+        }
         admin.setActif(true);
-        admin.setMustChangePassword(true);
         admin.setEmailVerified(true);
-        admin.setAtelier(atelier);
+        admin.setMustChangePassword(false);
+        admin.setAtelier(null);
         admin.setPlanCode(PlanCode.PLATEFORME);
-        roleRepository.findByCode(RoleCode.SUPER_ADMIN).ifPresent(role -> admin.setRoles(Set.of(role)));
+        Set<Role> roles = new HashSet<>(admin.getRoles() == null ? Set.of() : admin.getRoles());
+        roles.add(superAdmin);
+        admin.setRoles(roles);
         userRepository.save(admin);
-        log.info("Compte SUPER_ADMIN initial créé : {}", admin.getEmail());
+        log.info(created ? "Compte SUPER_ADMIN initial créé : {}" : "Compte SUPER_ADMIN bootstrap synchronisé : {}",
+                admin.getEmail());
+    }
+
+    private User findExistingPlatformAdmin() {
+        return userRepository.findDistinctByRoles_CodeOrderByIdAsc(RoleCode.SUPER_ADMIN).stream()
+                .filter(user -> user.getPlanCode() == PlanCode.PLATEFORME || user.getAtelier() == null)
+                .findFirst()
+                .orElse(null);
     }
 
     private void ensureSpecialites() {

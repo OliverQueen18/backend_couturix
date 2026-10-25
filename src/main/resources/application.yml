@@ -84,8 +84,8 @@ couturix:
       request-timeout-seconds: ${SMS_GATEWAY_TIMEOUT_SECONDS:10}
       default-country-code: ${SMS_GATEWAY_DEFAULT_COUNTRY_CODE:+223}
   bootstrap:
-    admin-email: ${ADMIN_EMAIL:admin@couturix.local}
-    admin-password: ${ADMIN_PASSWORD:Admin123!}
+    admin-email: ${ADMIN_EMAIL:${COUTURIX_ADMIN_EMAIL:admin@couturix.local}}
+    admin-password: ${ADMIN_PASSWORD:${COUTURIX_ADMIN_PASSWORD:Admin123!}}
     admin-nom: Administrateur
     admin-prenom: CouturiX
 

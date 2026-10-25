@@ -29,10 +29,9 @@ docker compose up -d postgres
 - Swagger : http://localhost:8080/swagger-ui.html
 - Santé : http://localhost:8080/actuator/health
 
-Compte initial (à changer dès la première connexion) :
-
-- e-mail : `admin@couturix.local` (ou `ADMIN_EMAIL`)
-- mot de passe : `Admin123!` (ou `ADMIN_PASSWORD`)
+Compte SUPER_ADMIN : e-mail et mot de passe de `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+(ou `COUTURIX_ADMIN_EMAIL` / `COUTURIX_ADMIN_PASSWORD` sur le VPS). Ils sont
+resynchronisés à chaque démarrage.
 
 ## Variables d’environnement
 
@@ -42,7 +41,7 @@ Aucune clé n’est codée en dur. Voir `.env.example` :
 | --- | --- |
 | `DATABASE_URL` / `USERNAME` / `PASSWORD` | PostgreSQL |
 | `JWT_SECRET` | Signature des jetons (≥ 32 caractères) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Bootstrap SUPER_ADMIN |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Compte SUPER_ADMIN (synchronisé au démarrage) |
 | `MAIL_*` | SMTP (Mailhog en local) |
 | `WHATSAPP_*` | API WhatsApp Business |
 | `SMS_GATEWAY_*` | Envoi SMS (Android SMS Gateway), dès l’offre Standard |
